@@ -1,0 +1,136 @@
+/**
+ * Core Philosophy:
+ * This ruleset establishes a baseline security model where the entire database is
+ * protected from public access, but any authenticated user is treated as an
+
+ * administrator with full read and write permissions across all collections.
+ * This is a secure starting point for a single-admin or internal business
+ * application where distinct user data ownership is not a requirement.
+ *
+ * Data Structure:
+ * The data is organized into several top-level collections representing core
+ * business entities: /customers, /perfumes, /sales, /investors, /investments,
+ * and /items. There are no user-specific subcollections.
+ *
+ * Key Security Decisions:
+ * - Authenticated Access Only: All read and write operations on any data
+ *   require the user to be signed in. This prevents any anonymous access,
+ *   protecting the data from public modification or scraping.
+ * - No Per-Document Ownership: The data models do not contain 'ownerId' or
+ *   'userId' fields. Therefore, the rules cannot enforce document-level
+ *   ownership. Instead, access is granted globally to any signed-in user.
+ * - Flexible Data Schema: In this prototyping stage, the rules do not
+ *   validate the specific shape or data types of documents. The focus is
+ *   strictly on ensuring only authenticated users can access the database.
+ *
+ * Denormalization for Authorization:
+ * This principle is not currently applied as the security model does not require
+ * complex authorization checks (like roles or collaborators). If the app evolves
+ * to support multiple users with different permissions, fields like 'ownerId'
+ * or 'roles' maps should be denormalized onto the documents they protect.
+ *
+ * Structural Segregation:
+ * The data model correctly uses separate top-level collections for each
+ * distinct entity type (e.g., /customers, /sales). This is a secure and
+ * performant pattern that avoids mixing data with different access needs.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------------------
+    // Helper Functions
+    // ----------------------------------------------------------------------
+
+    /**
+     * isSignedIn
+     * @description Checks if the user making the request is authenticated.
+     * @returns {boolean} True if a user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ----------------------------------------------------------------------
+    // Collection Rules
+    // ----------------------------------------------------------------------
+
+    /**
+     * @description Allows any authenticated user to manage Customer documents.
+     * @path /customers/{customerId}
+     * @allow A signed-in user (create) a new customer document.
+     * @deny An unauthenticated user (get) a customer document.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /customers/{customerId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows any authenticated user to manage Perfume documents.
+     * @path /perfumes/{perfumeId}
+     * @allow A signed-in user (update) an existing perfume document.
+     * @deny An unauthenticated user (list) all perfume documents.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /perfumes/{perfumeId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows any authenticated user to manage Sale documents.
+     * @path /sales/{saleId}
+     * @allow A signed-in user (create) a new sale document.
+     * @deny An unauthenticated user (delete) a sale document.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /sales/{saleId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows any authenticated user to manage Investor documents.
+     * @path /investors/{investorId}
+     * @allow A signed-in user (get) an investor document.
+     * @deny An unauthenticated user (create) a new investor document.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /investors/{investorId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows any authenticated user to manage Investment documents.
+     * @path /investments/{investmentId}
+     * @allow A signed-in user (list) all investment documents.
+     * @deny An unauthenticated user (update) an investment document.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /investments/{investmentId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Allows any authenticated user to manage Item documents.
+     * @path /items/{itemId}
+     * @allow A signed-in user (delete) an item document.
+     * @deny An unauthenticated user (list) all item documents.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /items/{itemId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "entities": {
+    "Sale": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Sale",
+      "type": "object",
+      "description": "Represents a single sale transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the sale transaction."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to Customer. (Relationship: Customer 1:N Sale)"
+        },
+        "perfumeIds": {
+          "type": "array",
+          "description": "References to Perfumes. (Relationship: Perfume N:N Sale)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of perfume sold."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the sale in PKR."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "Payment status of the sale (Paid, Unpaid, Remaining)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description or notes about the sale."
+        },
+        "saleDate": {
+          "type": "string",
+          "description": "Date of the sale.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "perfumeIds",
+        "price",
+        "paymentStatus",
+        "saleDate"
+      ]
+    },
+    "Investment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Investment",
+      "type": "object",
+      "description": "Represents an investment made in the business.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the investment."
+        },
+        "investorId": {
+          "type": "string",
+          "description": "Reference to Investor. (Relationship: Investor 1:N Investment)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the investment in PKR."
+        },
+        "source": {
+          "type": "string",
+          "description": "Source of the investment (External Investor, Business Self-Investment)."
+        },
+        "itemIds": {
+          "type": "array",
+          "description": "References to Items purchased with the investment. (Relationship: Item N:N Investment)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "investmentDate": {
+          "type": "string",
+          "description": "Date of the investment.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "investorId",
+        "amount",
+        "source",
+        "investmentDate"
+      ]
+    },
+    "Investor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Investor",
+      "type": "object",
+      "description": "Represents an investor in the business.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the investor."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the investor."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Item": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Item",
+      "type": "object",
+      "description": "Represents an item purchased with investment money.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the item."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the item."
+        },
+        "cost": {
+          "type": "number",
+          "description": "Cost of the item in PKR."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "cost"
+      ]
+    },
+    "Perfume": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Perfume",
+      "type": "object",
+      "description": "Represents a perfume product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the perfume product."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the perfume."
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Cost price of the perfume in PKR."
+        },
+        "sellingPrice": {
+          "type": "number",
+          "description": "Selling price of the perfume in PKR."
+        },
+        "quantityInStock": {
+          "type": "number",
+          "description": "Quantity of the perfume currently in stock."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "costPrice",
+        "sellingPrice",
+        "quantityInStock"
+      ]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a customer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the customer."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the customer."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores customer data.  Path-based ownership, where {customerId} is the document ID.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "The unique ID of the customer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/perfumes/{perfumeId}",
+        "definition": {
+          "entityName": "Perfume",
+          "schema": {
+            "$ref": "#/backend/entities/Perfume"
+          },
+          "description": "Stores perfume product data. Path-based ownership, where {perfumeId} is the document ID.",
+          "params": [
+            {
+              "name": "perfumeId",
+              "description": "The unique ID of the perfume product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sales/{saleId}",
+        "definition": {
+          "entityName": "Sale",
+          "schema": {
+            "$ref": "#/backend/entities/Sale"
+          },
+          "description": "Stores sale transaction data. Path-based ownership, where {saleId} is the document ID.",
+          "params": [
+            {
+              "name": "saleId",
+              "description": "The unique ID of the sale transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/investors/{investorId}",
+        "definition": {
+          "entityName": "Investor",
+          "schema": {
+            "$ref": "#/backend/entities/Investor"
+          },
+          "description": "Stores investor data.  Path-based ownership, where {investorId} is the document ID.",
+          "params": [
+            {
+              "name": "investorId",
+              "description": "The unique ID of the investor."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/investments/{investmentId}",
+        "definition": {
+          "entityName": "Investment",
+          "schema": {
+            "$ref": "#/backend/entities/Investment"
+          },
+          "description": "Stores investment data. Path-based ownership, where {investmentId} is the document ID.",
+          "params": [
+            {
+              "name": "investmentId",
+              "description": "The unique ID of the investment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/items/{itemId}",
+        "definition": {
+          "entityName": "Item",
+          "schema": {
+            "$ref": "#/backend/entities/Item"
+          },
+          "description": "Stores item data. Path-based ownership, where {itemId} is the document ID.",
+          "params": [
+            {
+              "name": "itemId",
+              "description": "The unique ID of the item."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the Perfume Profit Tracker application, emphasizing Authorization Independence, Structural Segregation, and Access Modeling. Path-based ownership is used where appropriate to define clear ownership and simplify security rules.\n\n1.  **Authorization Independence**:  Crucially, authorization data, specifically for collaborative scenarios is denormalized. This avoids the need for `get()` calls in security rules, enabling atomic operations.\n\n2.  **Structural Segregation**:  Each top-level collection stores a specific type of data with a homogenous security posture.  For example, `customers`, `perfumes`, `investors`, and `items` are separated to avoid mixing different access requirements within the same collection.\n\n3.  **Access Modeling**:  Path-based ownership is implemented for relationships like User-Owned investments. Other entities like customers, perfumes, investors and items are top level collections.\n\n4.  **Data Integrity and QAPs:** By segregating data into separate collections with defined schemas, querying and listing operations become straightforward and secure (QAPs). The relationships between sales, investment, perfumes, items and customers can be rebuilt at the application layer, based on the ids stored in each collection.\n\nThis structure allows for secure and scalable data management within the Perfume Profit Tracker application."
+  }
+}
