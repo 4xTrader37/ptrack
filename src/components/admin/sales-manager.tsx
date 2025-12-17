@@ -118,7 +118,7 @@ export function SalesManager() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {products.map((p) => (
+                              {products && products.map((p) => (
                                 <SelectItem key={p.id} value={p.id} disabled={p.quantity <= 0}>
                                   {p.name} (Stock: {p.quantity})
                                 </SelectItem>

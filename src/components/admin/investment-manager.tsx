@@ -169,7 +169,7 @@ export function InvestmentManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {investments.map((inv) => (
+              {investments && investments.map((inv) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.investorName}</TableCell>
                   <TableCell>{inv.source}</TableCell>
