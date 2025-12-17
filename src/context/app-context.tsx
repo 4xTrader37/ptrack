@@ -1,66 +1,10 @@
 'use client';
 
 import type { Product, Sale, Investment, SaleItem } from '@/lib/types';
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import { subDays, formatISO } from 'date-fns';
-
-const initialProducts: Product[] = [
-  { id: 'prod1', name: 'Mystic Oud', costPrice: 2500, sellingPrice: 4500, quantity: 50 },
-  { id: 'prod2', name: 'Rose Petal Elixir', costPrice: 1800, sellingPrice: 3200, quantity: 30 },
-  { id: 'prod3', name: 'Saffron Dusk', costPrice: 3500, sellingPrice: 6000, quantity: 20 },
-  { id: 'prod4', name: 'Ocean Breeze', costPrice: 1500, sellingPrice: 2800, quantity: 45 },
-];
-
-const initialSales: Sale[] = [
-  {
-    id: 'sale1',
-    customerName: 'Ahmed Khan',
-    items: [{ productId: 'prod1', quantity: 1, name: 'Mystic Oud', price: 4500 }],
-    totalPrice: 4500,
-    paymentStatus: 'Paid',
-    date: formatISO(subDays(new Date(), 2)),
-    description: 'Birthday gift packaging',
-  },
-  {
-    id: 'sale2',
-    customerName: 'Fatima Ali',
-    items: [{ productId: 'prod2', quantity: 2, name: 'Rose Petal Elixir', price: 3200 }],
-    totalPrice: 6400,
-    paymentStatus: 'Paid',
-    date: formatISO(subDays(new Date(), 5)),
-  },
-  {
-    id: 'sale3',
-    customerName: 'Zainab Corporation',
-    items: [
-      { productId: 'prod3', quantity: 5, name: 'Saffron Dusk', price: 6000 },
-      { productId: 'prod4', quantity: 5, name: 'Ocean Breeze', price: 2800 },
-    ],
-    totalPrice: 44000,
-    paymentStatus: 'Unpaid',
-    date: formatISO(subDays(new Date(), 10)),
-    description: 'Corporate order'
-  },
-];
-
-const initialInvestments: Investment[] = [
-  {
-    id: 'inv1',
-    investorName: 'Self',
-    amount: 50000,
-    source: 'Business Self-Investment',
-    itemsPurchased: 'Raw materials, packaging',
-    date: formatISO(subDays(new Date(), 20)),
-  },
-  {
-    id: 'inv2',
-    investorName: 'Yasir Malik',
-    amount: 150000,
-    source: 'External Investor',
-    itemsPurchased: 'New distillation equipment',
-    date: formatISO(subDays(new Date(), 8)),
-  },
-];
+import { createContext, useContext, type ReactNode } from 'react';
+import { formatISO } from 'date-fns';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 
 interface AppContextType {
   products: Product[];
@@ -69,7 +13,7 @@ interface AppContextType {
   addProduct: (product: Omit<Product, 'id'>) => void;
   addSale: (saleData: {
     customerName: string;
-    items: Omit<SaleItem, 'price'>[];
+    items: Omit<SaleItem, 'price' | 'name'>[];
     paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
     remainingAmount?: number;
     description?: string;
@@ -81,12 +25,19 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [sales, setSales] = useState<Sale[]>(initialSales);
-  const [investments, setInvestments] = useState<Investment[]>(initialInvestments);
+  const firestore = useFirestore();
+
+  const productsCollection = useMemoFirebase(() => collection(firestore, 'perfumes'), [firestore]);
+  const salesCollection = useMemoFirebase(() => collection(firestore, 'sales'), [firestore]);
+  const investmentsCollection = useMemoFirebase(() => collection(firestore, 'investments'), [firestore]);
+
+  const { data: products = [], isLoading: productsLoading } = useCollection<Product>(productsCollection);
+  const { data: sales = [], isLoading: salesLoading } = useCollection<Sale>(salesCollection);
+  const { data: investments = [], isLoading: investmentsLoading } = useCollection<Investment>(investmentsCollection);
 
   const addProduct = (product: Omit<Product, 'id'>) => {
-    setProducts((prev) => [...prev, { ...product, id: `prod${prev.length + 1}` }]);
+    if (!productsCollection) return;
+    addDocumentNonBlocking(productsCollection, product);
   };
 
   const addSale = (saleData: {
@@ -96,49 +47,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
     remainingAmount?: number;
     description?: string;
   }) => {
+    const batch = writeBatch(firestore);
     let totalPrice = 0;
-    const newProducts = [...products];
-    const saleItems: SaleItem[] = [];
+    const saleItems: Omit<SaleItem, 'price'>[] = [];
 
     for (const item of saleData.items) {
-      const productIndex = newProducts.findIndex(p => p.id === item.productId);
-      if (productIndex !== -1) {
-        const product = newProducts[productIndex];
-        const itemTotalPrice = product.sellingPrice * item.quantity;
-        totalPrice += itemTotalPrice;
+      const product = products.find(p => p.id === item.productId);
+      if (product) {
+        const productRef = doc(firestore, 'perfumes', product.id);
+        const newQuantity = product.quantity - item.quantity;
+        
+        if (newQuantity < 0) {
+          console.error(`Not enough stock for ${product.name}`);
+          // Potentially throw an error to be caught and displayed to the user
+          return;
+        }
 
-        newProducts[productIndex] = { ...product, quantity: product.quantity - item.quantity };
-        saleItems.push({ ...item, name: product.name, price: product.sellingPrice });
+        batch.update(productRef, { quantity: newQuantity });
+        totalPrice += product.sellingPrice * item.quantity;
+        saleItems.push({ ...item, name: product.name });
       }
     }
     
-    setProducts(newProducts);
+    if (!salesCollection) return;
+    const newSaleRef = doc(salesCollection);
 
-    const newSale: Sale = {
-      id: `sale${sales.length + 1}`,
+    const newSale: Omit<Sale, 'id'> = {
       date: formatISO(new Date()),
       totalPrice,
-      ...saleData,
-      items: saleItems,
+      customerName: saleData.customerName,
+      items: saleItems.map(item => ({...item, price: products.find(p => p.id === item.productId)?.sellingPrice || 0 })),
+      paymentStatus: saleData.paymentStatus,
+      remainingAmount: saleData.remainingAmount,
+      description: saleData.description,
     };
-    setSales((prev) => [newSale, ...prev]);
+
+    batch.set(newSaleRef, newSale);
+    
+    batch.commit().catch(error => {
+        console.error("Failed to record sale and update inventory", error);
+    });
   };
 
   const addInvestment = (investment: Omit<Investment, 'id' | 'date'>) => {
-    setInvestments((prev) => [
-      { ...investment, id: `inv${prev.length + 1}`, date: formatISO(new Date()) },
-      ...prev,
-    ]);
+    if (!investmentsCollection) return;
+    const newInvestment = {
+      ...investment,
+      date: formatISO(new Date()),
+    }
+    addDocumentNonBlocking(investmentsCollection, newInvestment);
   };
 
   const getInventoryValue = () => {
     return products.reduce((total, p) => total + p.costPrice * p.quantity, 0);
   }
 
+  const value = {
+    products,
+    sales,
+    investments,
+    addProduct,
+    addSale,
+    addInvestment,
+    getInventoryValue,
+  };
+
+  if(productsLoading || salesLoading || investmentsLoading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>
+  }
+
   return (
-    <AppContext.Provider
-      value={{ products, sales, investments, addProduct, addSale, addInvestment, getInventoryValue }}
-    >
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

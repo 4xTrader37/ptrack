@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { addDays, startOfToday, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { addDays, startOfToday, subDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import {
   Tabs,
@@ -48,21 +48,21 @@ export default function DashboardPage() {
   };
 
   const filteredSales = React.useMemo(() => {
-    if (!date?.from) return [];
+    if (!date?.from || !sales) return [];
     const fromDate = date.from;
     const toDate = date.to || date.from;
     return sales.filter((sale) => {
-      const saleDate = new Date(sale.date);
+      const saleDate = parseISO(sale.date);
       return saleDate >= fromDate && saleDate <= addDays(toDate,1);
     });
   }, [sales, date]);
 
   const filteredInvestments = React.useMemo(() => {
-    if (!date?.from) return [];
+    if (!date?.from || !investments) return [];
     const fromDate = date.from;
     const toDate = date.to || date.from;
     return investments.filter((investment) => {
-      const investmentDate = new Date(investment.date);
+      const investmentDate = parseISO(investment.date);
       return investmentDate >= fromDate && investmentDate <= addDays(toDate,1);
     });
   }, [investments, date]);
@@ -100,8 +100,8 @@ export default function DashboardPage() {
         totalInvestment={totalInvestment}
         profitOrLoss={profitOrLoss}
         profitLossRatio={profitLossRatio}
-        historicalSales={sales}
-        historicalInvestments={investments}
+        historicalSales={sales || []}
+        historicalInvestments={investments || []}
       />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
         <SalesTable sales={filteredSales} totalEarned={totalEarned} />
