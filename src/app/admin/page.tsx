@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -15,6 +16,8 @@ import {
 import { InventoryManager } from '@/components/admin/inventory-manager';
 import { SalesManager } from '@/components/admin/sales-manager';
 import { InvestmentManager } from '@/components/admin/investment-manager';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 export default function AdminPage() {
   return (
@@ -38,6 +41,13 @@ export default function AdminPage() {
           <InvestmentManager />
         </TabsContent>
       </Tabs>
+      <div className="flex justify-center mt-8">
+        <Button asChild variant="outline">
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Go to Overview Page
+          </Link>
+        </Button>
+      </div>
     </main>
   );
 }

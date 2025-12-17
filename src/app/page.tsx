@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { addDays, startOfToday, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import {
@@ -15,6 +16,8 @@ import { StatsCards } from '@/components/dashboard/stats-cards';
 import { SalesTable } from '@/components/dashboard/sales-table';
 import { InvestmentsTable } from '@/components/dashboard/investments-table';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 export default function DashboardPage() {
   const { sales, investments, products } = useAppContext();
@@ -103,6 +106,13 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
         <SalesTable sales={filteredSales} totalEarned={totalEarned} />
         <InvestmentsTable investments={filteredInvestments} />
+      </div>
+      <div className="flex justify-center mt-8">
+        <Button asChild variant="outline">
+          <Link href="/admin">
+            Go to Admin Page <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
       </div>
     </main>
   );
