@@ -4,12 +4,12 @@ import type { Product, Sale, Investment, SaleItem } from '@/lib/types';
 import { createContext, useContext, type ReactNode } from 'react';
 import { formatISO } from 'date-fns';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { useCollection, useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 
 interface AppContextType {
-  products: Product[];
-  sales: Sale[];
-  investments: Investment[];
+  products: Product[] | null;
+  sales: Sale[] | null;
+  investments: Investment[] | null;
   addProduct: (product: Omit<Product, 'id'>) => void;
   addSale: (saleData: {
     customerName: string;
@@ -20,6 +20,7 @@ interface AppContextType {
   }) => void;
   addInvestment: (investment: Omit<Investment, 'id' | 'date'>) => void;
   getInventoryValue: () => number;
+  isLoading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,13 +28,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
 
-  const productsCollection = useMemoFirebase(() => collection(firestore, 'perfumes'), [firestore]);
-  const salesCollection = useMemoFirebase(() => collection(firestore, 'sales'), [firestore]);
-  const investmentsCollection = useMemoFirebase(() => collection(firestore, 'investments'), [firestore]);
+  const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'perfumes') : null, [firestore]);
+  const salesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'sales') : null, [firestore]);
+  const investmentsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'investments') : null, [firestore]);
 
-  const { data: products = [], isLoading: productsLoading } = useCollection<Product>(productsCollection);
-  const { data: sales = [], isLoading: salesLoading } = useCollection<Sale>(salesCollection);
-  const { data: investments = [], isLoading: investmentsLoading } = useCollection<Investment>(investmentsCollection);
+  const { data: products, isLoading: productsLoading } = useCollection<Product>(productsCollection);
+  const { data: sales, isLoading: salesLoading } = useCollection<Sale>(salesCollection);
+  const { data: investments, isLoading: investmentsLoading } = useCollection<Investment>(investmentsCollection);
 
   const addProduct = (product: Omit<Product, 'id'>) => {
     if (!productsCollection) return;
@@ -47,6 +48,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     remainingAmount?: number;
     description?: string;
   }) => {
+    if (!firestore || !products) return;
     const batch = writeBatch(firestore);
     let totalPrice = 0;
     const saleItems: Omit<SaleItem, 'price'>[] = [];
@@ -99,8 +101,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const getInventoryValue = () => {
+    if (!products) return 0;
     return products.reduce((total, p) => total + p.costPrice * p.quantity, 0);
   }
+
+  const isLoading = productsLoading || salesLoading || investmentsLoading;
 
   const value = {
     products,
@@ -110,9 +115,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addSale,
     addInvestment,
     getInventoryValue,
+    isLoading,
   };
 
-  if(productsLoading || salesLoading || investmentsLoading) {
+  if(isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>
   }
 
