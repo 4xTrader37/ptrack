@@ -21,7 +21,7 @@ import { ArrowRight } from 'lucide-react';
 import { InventoryTable } from '@/components/dashboard/inventory-table';
 
 export default function DashboardPage() {
-  const { sales, investments, products, getInventoryValue } = useAppContext();
+  const { sales, investments, products, getInventoryValue, getInventoryProfit } = useAppContext();
   const [tab, setTab] = React.useState('7days');
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: subDays(startOfToday(), 6),
@@ -111,6 +111,7 @@ export default function DashboardPage() {
         historicalInvestments={investments || []}
         totalInventoryValue={getInventoryValue()}
         totalInventoryItems={totalInventoryItems}
+        totalInventoryProfit={getInventoryProfit()}
       />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
         <SalesTable sales={filteredSales} totalEarned={totalEarned} />

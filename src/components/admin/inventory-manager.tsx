@@ -55,7 +55,7 @@ const productSchema = z.object({
 });
 
 export function InventoryManager() {
-  const { products, addProduct, updateProduct, deleteProduct, getInventoryValue } = useAppContext();
+  const { products, addProduct, updateProduct, deleteProduct, getInventoryValue, getInventoryProfit } = useAppContext();
   const { toast } = useToast();
   const [isEdit, setIsEdit] = useState(false);
 
@@ -83,7 +83,7 @@ export function InventoryManager() {
         description: `${values.name} has been added to the inventory.`,
       });
     }
-    form.reset();
+    form.reset({ name: '', costPrice: 0, sellingPrice: 0, quantity: 0 });
     setIsEdit(false);
   }
 
@@ -197,9 +197,9 @@ export function InventoryManager() {
             <TableHeader>
               <TableRow>
                 <TableHead>Product Name</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="text-right">Selling Price</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead>Profit/Piece</TableHead>
+                <TableHead>Total Profit</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -207,9 +207,9 @@ export function InventoryManager() {
               {products && products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(product.costPrice)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(product.sellingPrice)}</TableCell>
-                  <TableCell className="text-right">{product.quantity}</TableCell>
+                  <TableCell>{product.quantity}</TableCell>
+                  <TableCell>{formatCurrency(product.sellingPrice - product.costPrice)}</TableCell>
+                  <TableCell>{formatCurrency((product.sellingPrice - product.costPrice) * product.quantity)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEditClick(product)}>
                       <Pencil className="h-4 w-4" />
@@ -243,10 +243,14 @@ export function InventoryManager() {
             </TableBody>
           </Table>
         </CardContent>
-        <CardFooter className="justify-end">
+        <CardFooter className="justify-end gap-8">
             <div className="text-right">
                 <p className="font-bold text-lg">Total Inventory Value</p>
                 <p className="text-2xl font-bold">{formatCurrency(getInventoryValue())}</p>
+            </div>
+            <div className="text-right">
+                <p className="font-bold text-lg text-green-700 dark:text-green-400">Total Potential Profit</p>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatCurrency(getInventoryProfit())}</p>
             </div>
         </CardFooter>
       </Card>

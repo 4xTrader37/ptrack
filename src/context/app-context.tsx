@@ -26,6 +26,7 @@ interface AppContextType {
   deleteSale: (id: string) => void;
   addInvestment: (investment: Omit<Investment, 'id' | 'date'>) => void;
   getInventoryValue: () => number;
+  getInventoryProfit: () => number;
   isLoading: boolean;
   addCustomer: (customer: Omit<Customer, 'id'>) => void;
   updateCustomer: (id: string, customer: Partial<Omit<Customer, 'id'>>) => void;
@@ -243,6 +244,11 @@ const deleteSale = (id: string) => {
     return products.reduce((total, p) => total + p.costPrice * p.quantity, 0);
   }
 
+  const getInventoryProfit = () => {
+    if (!products) return 0;
+    return products.reduce((total, p) => total + (p.sellingPrice - p.costPrice) * p.quantity, 0);
+  }
+
   const addCustomer = (customer: Omit<Customer, 'id'>) => {
     if (!customersCollection) return;
     addDocumentNonBlocking(customersCollection, customer);
@@ -294,6 +300,7 @@ const deleteSale = (id: string) => {
     deleteSale,
     addInvestment,
     getInventoryValue,
+    getInventoryProfit,
     isLoading,
     addCustomer,
     updateCustomer,

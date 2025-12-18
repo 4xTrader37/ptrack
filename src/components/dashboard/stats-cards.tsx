@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Wallet, Landmark, Package, Archive } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Landmark, Package, Archive, BadgeDollarSign } from 'lucide-react';
 import type { Investment, Sale } from '@/lib/types';
 import { ForecastDialog } from './forecast-dialog';
 
@@ -19,6 +19,7 @@ interface StatsCardsProps {
   historicalInvestments: Investment[];
   totalInventoryValue: number;
   totalInventoryItems: number;
+  totalInventoryProfit: number;
 }
 
 export function StatsCards({
@@ -30,11 +31,12 @@ export function StatsCards({
   historicalInvestments,
   totalInventoryValue,
   totalInventoryItems,
+  totalInventoryProfit,
 }: StatsCardsProps) {
   const isProfit = profitOrLoss >= 0;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
+    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
@@ -67,7 +69,7 @@ export function StatsCards({
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>
           <p className="text-xs text-muted-foreground">
-            Total value of all items in stock
+            Total cost value of all items in stock
           </p>
         </CardContent>
       </Card>
@@ -80,6 +82,18 @@ export function StatsCards({
           <div className="text-2xl font-bold">{totalInventoryItems}</div>
           <p className="text-xs text-muted-foreground">
             Total number of all items in stock
+          </p>
+        </CardContent>
+      </Card>
+       <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Potential Profit</CardTitle>
+          <BadgeDollarSign className="h-4 w-4 text-green-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-700 dark:text-green-400">{formatCurrency(totalInventoryProfit)}</div>
+          <p className="text-xs text-green-600">
+            Estimated profit from current inventory
           </p>
         </CardContent>
       </Card>
