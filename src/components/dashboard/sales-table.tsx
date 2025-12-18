@@ -18,13 +18,18 @@ import { Badge } from '@/components/ui/badge';
 import type { Sale } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+
+type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining';
 
 interface SalesTableProps {
   sales: Sale[];
   totalEarned: number;
+  statusFilter: PaymentStatusFilter;
+  onStatusFilterChange: (status: PaymentStatusFilter) => void;
 }
 
-export function SalesTable({ sales, totalEarned }: SalesTableProps) {
+export function SalesTable({ sales, totalEarned, statusFilter, onStatusFilterChange }: SalesTableProps) {
   const getBadgeVariant = (status: Sale['paymentStatus']) => {
     switch (status) {
       case 'Paid':
@@ -37,11 +42,25 @@ export function SalesTable({ sales, totalEarned }: SalesTableProps) {
         return 'outline';
     }
   };
+
+  const filteredSalesCount = sales.length;
+  const filteredSalesTotal = sales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="font-headline">Sales</CardTitle>
-        <CardDescription>A list of recent sales.</CardDescription>
+      <CardHeader className="flex flex-row justify-between items-center">
+        <div>
+            <CardTitle className="font-headline">Sales</CardTitle>
+            <CardDescription>A list of recent sales.</CardDescription>
+        </div>
+        <Tabs value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as PaymentStatusFilter)}>
+            <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="Paid">Paid</TabsTrigger>
+                <TabsTrigger value="Unpaid">Unpaid</TabsTrigger>
+                <TabsTrigger value="Remaining">Remaining</TabsTrigger>
+            </TabsList>
+        </Tabs>
       </CardHeader>
       <CardContent>
         <Table>
@@ -76,7 +95,7 @@ export function SalesTable({ sales, totalEarned }: SalesTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="text-center">
-                  No sales in this period.
+                  No sales match the current filters.
                 </TableCell>
               </TableRow>
             )}
@@ -85,11 +104,11 @@ export function SalesTable({ sales, totalEarned }: SalesTableProps) {
       </CardContent>
       <CardFooter className="flex justify-between">
         <div>
-          <div className="text-xs text-muted-foreground">Total Sales Count</div>
-          <div className="font-bold">{sales.length}</div>
+            <div className="text-xs text-muted-foreground">Showing {filteredSalesCount} sale(s)</div>
+            <div className="font-bold">{formatCurrency(filteredSalesTotal)}</div>
         </div>
         <div>
-          <div className="text-xs text-muted-foreground text-right">Total Earned</div>
+          <div className="text-xs text-muted-foreground text-right">Total Earned (in period)</div>
            <div className="font-bold text-right">{formatCurrency(totalEarned)}</div>
         </div>
       </CardFooter>

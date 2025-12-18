@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { InventoryTable } from '@/components/dashboard/inventory-table';
 
+type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining';
+
 export default function DashboardPage() {
   const { sales, investments, products, getInventoryValue, getInventoryProfit } = useAppContext();
   const [tab, setTab] = React.useState('7days');
@@ -27,6 +29,8 @@ export default function DashboardPage() {
     from: subDays(startOfToday(), 6),
     to: startOfToday(),
   });
+  const [paymentStatusFilter, setPaymentStatusFilter] = React.useState<PaymentStatusFilter>('all');
+
 
   const handleTabChange = (value: string) => {
     setTab(value);
@@ -48,7 +52,7 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredSales = React.useMemo(() => {
+  const dateFilteredSales = React.useMemo(() => {
     if (!date?.from || !sales) return [];
     const fromDate = date.from;
     const toDate = date.to || date.from;
@@ -57,6 +61,13 @@ export default function DashboardPage() {
       return saleDate >= fromDate && saleDate <= addDays(toDate,1);
     });
   }, [sales, date]);
+
+  const filteredSales = React.useMemo(() => {
+    if (paymentStatusFilter === 'all') {
+      return dateFilteredSales;
+    }
+    return dateFilteredSales.filter(sale => sale.paymentStatus === paymentStatusFilter);
+  }, [dateFilteredSales, paymentStatusFilter]);
 
   const filteredInvestments = React.useMemo(() => {
     if (!date?.from || !investments) return [];
@@ -69,14 +80,14 @@ export default function DashboardPage() {
   }, [investments, date]);
 
   const { totalSales, totalInvestment, profitOrLoss, profitLossRatio, totalEarned } = React.useMemo(() => {
-    const totalSales = filteredSales.reduce((sum, sale) => sum + sale.totalPrice, 0);
+    const totalSales = dateFilteredSales.reduce((sum, sale) => sum + sale.totalPrice, 0);
     const totalInvestment = filteredInvestments.reduce((sum, investment) => sum + investment.amount, 0);
     const profitOrLoss = totalSales - totalInvestment;
     const profitLossRatio = totalInvestment > 0 ? (profitOrLoss / totalInvestment) * 100 : (totalSales > 0 ? 100 : 0);
-    const totalEarned = filteredSales.filter(s => s.paymentStatus === 'Paid').reduce((sum, sale) => sum + sale.totalPrice, 0);
+    const totalEarned = dateFilteredSales.filter(s => s.paymentStatus === 'Paid').reduce((sum, sale) => sum + sale.totalPrice, 0);
 
     return { totalSales, totalInvestment, profitOrLoss, profitLossRatio, totalEarned };
-  }, [filteredSales, filteredInvestments]);
+  }, [dateFilteredSales, filteredInvestments]);
   
   const totalInventoryItems = React.useMemo(() => {
     if (!products) return 0;
@@ -114,7 +125,12 @@ export default function DashboardPage() {
         totalInventoryProfit={getInventoryProfit()}
       />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
-        <SalesTable sales={filteredSales} totalEarned={totalEarned} />
+        <SalesTable 
+            sales={filteredSales} 
+            totalEarned={totalEarned} 
+            statusFilter={paymentStatusFilter}
+            onStatusFilterChange={setPaymentStatusFilter}
+        />
         <InvestmentsTable investments={filteredInvestments} />
       </div>
       <InventoryTable products={products || []} />
