@@ -45,7 +45,7 @@ import {
     TableRow,
   } from '@/components/ui/table';
 import type { Sale } from '@/lib/types';
-import { format, parse, parseISO, formatISO } from 'date-fns';
+import { format, parse, parseISO, formatISO, isValid } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import React from 'react';
@@ -106,9 +106,20 @@ export function SalesManager() {
   const watchPaymentStatus = form.watch('paymentStatus');
 
   function onSubmit(values: z.infer<typeof salesSchema>) {
+    let reminderDateISO: string | undefined = undefined;
+    if (values.reminderDate) {
+        const parsedDate = parse(values.reminderDate, 'dd/MM/yyyy', new Date());
+        if (isValid(parsedDate)) {
+            reminderDateISO = formatISO(parsedDate);
+        } else {
+            form.setError('reminderDate', { type: 'manual', message: 'Invalid date format. Use dd/mm/yyyy' });
+            return;
+        }
+    }
+
     const saleData = {
         ...values,
-        reminderDate: values.reminderDate ? formatISO(parse(values.reminderDate, 'dd/MM/yyyy', new Date())) : undefined,
+        reminderDate: reminderDateISO,
     }
 
     if (isEdit && values.id) {
@@ -345,7 +356,7 @@ export function SalesManager() {
                                   <FormItem>
                                     <FormLabel>Reminder Date</FormLabel>
                                     <FormControl>
-                                      <Input placeholder="dd/mm/yyyy" {...field} />
+                                      <Input placeholder="dd/MM/yyyy" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
