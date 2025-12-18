@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Wallet, Landmark } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Landmark, Package, Archive } from 'lucide-react';
 import type { Investment, Sale } from '@/lib/types';
 import { ForecastDialog } from './forecast-dialog';
 
@@ -17,6 +17,8 @@ interface StatsCardsProps {
   profitLossRatio: number;
   historicalSales: Sale[];
   historicalInvestments: Investment[];
+  totalInventoryValue: number;
+  totalInventoryItems: number;
 }
 
 export function StatsCards({
@@ -25,12 +27,14 @@ export function StatsCards({
   profitOrLoss,
   profitLossRatio,
   historicalSales,
-  historicalInvestments
+  historicalInvestments,
+  totalInventoryValue,
+  totalInventoryItems,
 }: StatsCardsProps) {
   const isProfit = profitOrLoss >= 0;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
@@ -52,6 +56,30 @@ export function StatsCards({
           <div className="text-2xl font-bold">{formatCurrency(totalInvestment)}</div>
           <p className="text-xs text-muted-foreground">
             Total investment in selected period
+          </p>
+        </CardContent>
+      </Card>
+       <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+          <Archive className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>
+          <p className="text-xs text-muted-foreground">
+            Total value of all items in stock
+          </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Items in Stock</CardTitle>
+          <Package className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalInventoryItems}</div>
+          <p className="text-xs text-muted-foreground">
+            Total number of all items in stock
           </p>
         </CardContent>
       </Card>

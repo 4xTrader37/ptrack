@@ -18,9 +18,10 @@ import { InvestmentsTable } from '@/components/dashboard/investments-table';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { InventoryTable } from '@/components/dashboard/inventory-table';
 
 export default function DashboardPage() {
-  const { sales, investments } = useAppContext();
+  const { sales, investments, products, getInventoryValue } = useAppContext();
   const [tab, setTab] = React.useState('7days');
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: subDays(startOfToday(), 6),
@@ -76,6 +77,12 @@ export default function DashboardPage() {
 
     return { totalSales, totalInvestment, profitOrLoss, profitLossRatio, totalEarned };
   }, [filteredSales, filteredInvestments]);
+  
+  const totalInventoryItems = React.useMemo(() => {
+    if (!products) return 0;
+    return products.reduce((total, p) => total + p.quantity, 0);
+  }, [products]);
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -102,11 +109,14 @@ export default function DashboardPage() {
         profitLossRatio={profitLossRatio}
         historicalSales={sales || []}
         historicalInvestments={investments || []}
+        totalInventoryValue={getInventoryValue()}
+        totalInventoryItems={totalInventoryItems}
       />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2">
         <SalesTable sales={filteredSales} totalEarned={totalEarned} />
         <InvestmentsTable investments={filteredInvestments} />
       </div>
+      <InventoryTable products={products || []} />
       <div className="flex justify-center mt-8">
         <Button asChild variant="outline">
           <Link href="/admin">
