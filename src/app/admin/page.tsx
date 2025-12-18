@@ -16,6 +16,8 @@ import {
 import { InventoryManager } from '@/components/admin/inventory-manager';
 import { SalesManager } from '@/components/admin/sales-manager';
 import { InvestmentManager } from '@/components/admin/investment-manager';
+import { CustomerManager } from '@/components/admin/customer-manager';
+import { InvestorManager } from '@/components/admin/investor-manager';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -30,6 +32,8 @@ export default function AdminPage() {
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="sales">Sales</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
+          <TabsTrigger value="customers">Customers</TabsTrigger>
+          <TabsTrigger value="investors">Investors</TabsTrigger>
         </TabsList>
         <TabsContent value="inventory" className="space-y-4">
           <InventoryManager />
@@ -39,6 +43,12 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="investments" className="space-y-4">
           <InvestmentManager />
+        </TabsContent>
+        <TabsContent value="customers" className="space-y-4">
+          <CustomerManager />
+        </TabsContent>
+        <TabsContent value="investors" className="space-y-4">
+          <InvestorManager />
         </TabsContent>
       </Tabs>
       <div className="flex justify-center mt-8">

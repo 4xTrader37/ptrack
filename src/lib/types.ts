@@ -32,3 +32,13 @@ export interface Investment {
   itemsPurchased: string;
   date: string;
 }
+
+export interface Customer {
+    id: string;
+    name: string;
+}
+
+export interface Investor {
+    id: string;
+    name: string;
+}
