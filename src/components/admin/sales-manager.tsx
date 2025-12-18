@@ -94,6 +94,7 @@ export function SalesManager() {
       paymentStatus: 'Paid',
       remainingAmount: 0,
       description: '',
+      reminderDate: '',
     },
   });
 
@@ -128,7 +129,8 @@ export function SalesManager() {
         items: [{ productId: '', quantity: 1, price: 0 }],
         paymentStatus: 'Paid',
         description: '',
-        remainingAmount: 0
+        remainingAmount: 0,
+        reminderDate: '',
     });
     setIsEdit(false);
     setIsDialogOpen(false);
@@ -142,7 +144,7 @@ export function SalesManager() {
       paymentStatus: 'Paid',
       remainingAmount: 0,
       description: '',
-      reminderDate: undefined,
+      reminderDate: '',
     });
     setIsDialogOpen(true);
   }
@@ -152,7 +154,7 @@ export function SalesManager() {
     form.reset({
         ...sale,
         items: sale.items.map(i => ({productId: i.productId, quantity: i.quantity, price: i.price })),
-        reminderDate: sale.reminderDate ? format(parseISO(sale.reminderDate), 'dd/MM/yyyy') : undefined,
+        reminderDate: sale.reminderDate ? format(parseISO(sale.reminderDate), 'dd/MM/yyyy') : '',
     });
     setIsDialogOpen(true);
   }
