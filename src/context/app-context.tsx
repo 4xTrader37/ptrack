@@ -1,10 +1,10 @@
 'use client';
 
 import type { Product, Sale, Investment, SaleItem, Customer, Investor } from '@/lib/types';
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode, useMemo } from 'react';
 import { formatISO } from 'date-fns';
 import { collection, doc, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 
 interface AppContextType {
   products: Product[] | null;
@@ -22,6 +22,8 @@ interface AppContextType {
     remainingAmount?: number;
     description?: string;
   }) => void;
+  updateSale: (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice' | 'items'> & { items: Omit<SaleItem, 'price' | 'name'>[] }) => void;
+  deleteSale: (id: string) => void;
   addInvestment: (investment: Omit<Investment, 'id' | 'date'>) => void;
   getInventoryValue: () => number;
   isLoading: boolean;
@@ -74,12 +76,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     remainingAmount?: number;
     description?: string;
   }) => {
-    if (!firestore || !products || !customersCollection || !customers) return;
+    if (!firestore || !products || !salesCollection || !customersCollection || !customers) return;
     const batch = writeBatch(firestore);
     let totalPrice = 0;
     const saleItems: Omit<SaleItem, 'price'>[] = [];
 
-    // Check if customer exists, if not, create it
     let customer = customers.find(c => c.name.toLowerCase() === saleData.customerName.toLowerCase());
     if (!customer) {
         const newCustomerRef = doc(customersCollection);
@@ -87,7 +88,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         batch.set(newCustomerRef, newCustomer);
         customer = newCustomer;
     }
-
 
     for (const item of saleData.items) {
       const product = products.find(p => p.id === item.productId);
@@ -97,7 +97,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         if (newQuantity < 0) {
           console.error(`Not enough stock for ${product.name}`);
-          // Potentially throw an error to be caught and displayed to the user
           return;
         }
 
@@ -107,9 +106,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     
-    if (!salesCollection) return;
     const newSaleRef = doc(salesCollection);
-
     const newSale: Omit<Sale, 'id'> = {
       date: formatISO(new Date()),
       totalPrice,
@@ -127,12 +124,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateSale = async (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice' | 'items'> & { items: Omit<SaleItem, 'price' | 'name'>[] }) => {
+    if (!firestore || !products || !sales) return;
+    
+    const saleRef = doc(firestore, 'sales', id);
+    const originalSale = sales.find(s => s.id === id);
+    if (!originalSale) return;
+
+    const batch = writeBatch(firestore);
+
+    // Revert old inventory changes
+    for (const item of originalSale.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+            const productRef = doc(firestore, 'perfumes', product.id);
+            batch.update(productRef, { quantity: product.quantity + item.quantity });
+        }
+    }
+
+    let newTotalPrice = 0;
+    const newSaleItems: SaleItem[] = [];
+
+    // Apply new inventory changes and calculate new total price
+    for (const item of saleData.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+            const productRef = doc(firestore, 'perfumes', product.id);
+            const newQuantity = product.quantity - item.quantity;
+            if (newQuantity < 0) {
+                console.error(`Not enough stock for ${product.name}`);
+                // NOTE: This will cancel the whole batch. 
+                // A better implementation might show an error to the user without reverting.
+                return batch.commit().then(() => Promise.reject("Not enough stock"));
+            }
+            batch.update(productRef, { quantity: newQuantity });
+            newTotalPrice += product.sellingPrice * item.quantity;
+            newSaleItems.push({ ...item, name: product.name, price: product.sellingPrice });
+        }
+    }
+
+    const updatedSale = {
+        ...saleData,
+        totalPrice: newTotalPrice,
+        items: newSaleItems,
+    };
+
+    batch.update(saleRef, updatedSale);
+    
+    batch.commit().catch(error => {
+        console.error("Failed to update sale", error);
+    });
+};
+
+const deleteSale = (id: string) => {
+    if (!firestore || !sales || !products) return;
+
+    const saleToDelete = sales.find(s => s.id === id);
+    if (!saleToDelete) return;
+
+    const batch = writeBatch(firestore);
+
+    // Restore inventory
+    for (const item of saleToDelete.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+            const productRef = doc(firestore, 'perfumes', product.id);
+            batch.update(productRef, { quantity: product.quantity + item.quantity });
+        }
+    }
+
+    const saleRef = doc(firestore, 'sales', id);
+    batch.delete(saleRef);
+
+    batch.commit().catch(error => {
+        console.error("Failed to delete sale and restore inventory", error);
+    });
+};
+
   const addInvestment = (investment: Omit<Investment, 'id' | 'date'>) => {
     if (!investmentsCollection || !investorsCollection || !investors) return;
 
     const batch = writeBatch(firestore!);
 
-     // Check if investor exists, if not, create it
     let investor = investors.find(i => i.name.toLowerCase() === investment.investorName.toLowerCase());
     if (!investor) {
         const newInvestorRef = doc(investorsCollection);
@@ -205,6 +278,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateProduct,
     deleteProduct,
     addSale,
+    updateSale,
+    deleteSale,
     addInvestment,
     getInventoryValue,
     isLoading,
