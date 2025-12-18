@@ -54,6 +54,7 @@ import React from 'react';
 const saleItemSchema = z.object({
   productId: z.string().min(1, 'Product is required'),
   quantity: z.coerce.number().int().min(1, 'Quantity must be at least 1'),
+  price: z.coerce.number().min(0, 'Price must be non-negative'),
 });
 
 const salesSchema = z.object({
@@ -88,7 +89,7 @@ export function SalesManager() {
     resolver: zodResolver(salesSchema),
     defaultValues: {
       customerName: '',
-      items: [{ productId: '', quantity: 1 }],
+      items: [{ productId: '', quantity: 1, price: 0 }],
       paymentStatus: 'Paid',
       remainingAmount: 0,
       description: '',
@@ -118,7 +119,7 @@ export function SalesManager() {
     }
     form.reset({
         customerName: '',
-        items: [{ productId: '', quantity: 1 }],
+        items: [{ productId: '', quantity: 1, price: 0 }],
         paymentStatus: 'Paid',
         description: '',
         remainingAmount: 0
@@ -131,7 +132,7 @@ export function SalesManager() {
     setIsEdit(false);
     form.reset({
       customerName: '',
-      items: [{ productId: '', quantity: 1 }],
+      items: [{ productId: '', quantity: 1, price: 0 }],
       paymentStatus: 'Paid',
       remainingAmount: 0,
       description: ''
@@ -143,7 +144,7 @@ export function SalesManager() {
     setIsEdit(true);
     form.reset({
         ...sale,
-        items: sale.items.map(i => ({productId: i.productId, quantity: i.quantity}))
+        items: sale.items.map(i => ({productId: i.productId, quantity: i.quantity, price: i.price }))
     });
     setIsDialogOpen(true);
   }
@@ -189,13 +190,21 @@ export function SalesManager() {
                         <FormLabel>Items</FormLabel>
                         <div className="space-y-4 mt-2">
                             {fields.map((field, index) => (
-                            <div key={field.id} className="flex items-end gap-4">
+                            <div key={field.id} className="flex items-end gap-2">
                                 <FormField
                                 control={form.control}
                                 name={`items.${index}.productId`}
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select 
+                                        onValueChange={(value) => {
+                                            field.onChange(value)
+                                            const product = products?.find(p => p.id === value);
+                                            if (product) {
+                                                form.setValue(`items.${index}.price`, product.sellingPrice);
+                                            }
+                                        }} 
+                                        defaultValue={field.value}>
                                         <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a perfume" />
@@ -214,11 +223,22 @@ export function SalesManager() {
                                 />
                                 <FormField
                                 control={form.control}
+                                name={`items.${index}.price`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormControl>
+                                        <Input type="number" placeholder="Price" className="w-28" {...field} />
+                                    </FormControl>
+                                    </FormItem>
+                                )}
+                                />
+                                <FormField
+                                control={form.control}
                                 name={`items.${index}.quantity`}
                                 render={({ field }) => (
                                     <FormItem>
                                     <FormControl>
-                                        <Input type="number" placeholder="Qty" className="w-24" {...field} />
+                                        <Input type="number" placeholder="Qty" className="w-20" {...field} />
                                     </FormControl>
                                     </FormItem>
                                 )}
@@ -240,7 +260,7 @@ export function SalesManager() {
                             variant="outline"
                             size="sm"
                             className="mt-2"
-                            onClick={() => append({ productId: '', quantity: 1 })}
+                            onClick={() => append({ productId: '', quantity: 1, price: 0 })}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Item
@@ -361,7 +381,7 @@ export function SalesManager() {
                     <div className="font-medium">{sale.customerName}</div>
                   </TableCell>
                   <TableCell>
-                    {sale.items.map(item => `${item.name} (x${item.quantity})`).join(', ')}
+                    {sale.items.map(item => `${item.name} (x${item.quantity}) @ ${formatCurrency(item.price)}`).join(', ')}
                   </TableCell>
                   <TableCell>{format(parseISO(sale.date), 'dd MMM yyyy')}</TableCell>
                   <TableCell>

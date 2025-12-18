@@ -62,7 +62,7 @@ export function SalesTable({ sales, totalEarned }: SalesTableProps) {
                     <div className="font-medium">{sale.customerName}</div>
                   </TableCell>
                   <TableCell>
-                    {sale.items.map(item => `${item.name} (x${item.quantity})`).join(', ')}
+                    {sale.items.map(item => `${item.name} (x${item.quantity}) @ ${formatCurrency(item.price)}`).join(', ')}
                   </TableCell>
                   <TableCell>{format(parseISO(sale.date), 'dd MMM yyyy')}</TableCell>
                   <TableCell>

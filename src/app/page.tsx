@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { sales, investments, products } = useAppContext();
+  const { sales, investments } = useAppContext();
   const [tab, setTab] = React.useState('7days');
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: subDays(startOfToday(), 6),

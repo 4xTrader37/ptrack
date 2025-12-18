@@ -1,10 +1,10 @@
 'use client';
 
 import type { Product, Sale, Investment, SaleItem, Customer, Investor } from '@/lib/types';
-import { createContext, useContext, type ReactNode, useMemo } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { formatISO } from 'date-fns';
-import { collection, doc, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
-import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 interface AppContextType {
   products: Product[] | null;
@@ -13,25 +13,25 @@ interface AppContextType {
   customers: Customer[] | null;
   investors: Investor[] | null;
   addProduct: (product: Omit<Product, 'id'>) => void;
-  updateProduct: (id: string, product: Omit<Product, 'id'>) => void;
+  updateProduct: (id: string, product: Partial<Omit<Product, 'id'>>) => void;
   deleteProduct: (id: string) => void;
   addSale: (saleData: {
     customerName: string;
-    items: Omit<SaleItem, 'price' | 'name'>[];
+    items: { productId: string, quantity: number, price: number }[];
     paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
     remainingAmount?: number;
     description?: string;
   }) => void;
-  updateSale: (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice' | 'items'> & { items: Omit<SaleItem, 'price' | 'name'>[] }) => void;
+  updateSale: (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice'>) => void;
   deleteSale: (id: string) => void;
   addInvestment: (investment: Omit<Investment, 'id' | 'date'>) => void;
   getInventoryValue: () => number;
   isLoading: boolean;
   addCustomer: (customer: Omit<Customer, 'id'>) => void;
-  updateCustomer: (id: string, customer: Omit<Customer, 'id'>) => void;
+  updateCustomer: (id: string, customer: Partial<Omit<Customer, 'id'>>) => void;
   deleteCustomer: (id: string) => void;
   addInvestor: (investor: Omit<Investor, 'id'>) => void;
-  updateInvestor: (id: string, investor: Omit<Investor, 'id'>) => void;
+  updateInvestor: (id: string, investor: Partial<Omit<Investor, 'id'>>) => void;
   deleteInvestor: (id: string) => void;
 }
 
@@ -57,7 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addDocumentNonBlocking(productsCollection, product);
   };
 
-  const updateProduct = (id: string, product: Omit<Product, 'id'>) => {
+  const updateProduct = (id: string, product: Partial<Omit<Product, 'id'>>) => {
     if (!firestore) return;
     const productRef = doc(firestore, 'perfumes', id);
     updateDocumentNonBlocking(productRef, product);
@@ -71,7 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addSale = (saleData: {
     customerName: string;
-    items: Omit<SaleItem, 'price' | 'name'>[];
+    items: { productId: string, quantity: number, price: number }[];
     paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
     remainingAmount?: number;
     description?: string;
@@ -79,7 +79,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!firestore || !products || !salesCollection || !customersCollection || !customers) return;
     const batch = writeBatch(firestore);
     let totalPrice = 0;
-    const saleItems: Omit<SaleItem, 'price'>[] = [];
+    const saleItems: SaleItem[] = [];
 
     let customer = customers.find(c => c.name.toLowerCase() === saleData.customerName.toLowerCase());
     if (!customer) {
@@ -97,11 +97,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         if (newQuantity < 0) {
           console.error(`Not enough stock for ${product.name}`);
+          // TODO: This should probably show an error to the user
           return;
         }
 
         batch.update(productRef, { quantity: newQuantity });
-        totalPrice += product.sellingPrice * item.quantity;
+        totalPrice += item.price * item.quantity;
         saleItems.push({ ...item, name: product.name });
       }
     }
@@ -111,7 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       date: formatISO(new Date()),
       totalPrice,
       customerName: saleData.customerName,
-      items: saleItems.map(item => ({...item, price: products.find(p => p.id === item.productId)?.sellingPrice || 0 })),
+      items: saleItems,
       paymentStatus: saleData.paymentStatus,
       remainingAmount: saleData.remainingAmount,
       description: saleData.description,
@@ -124,7 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateSale = async (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice' | 'items'> & { items: Omit<SaleItem, 'price' | 'name'>[] }) => {
+  const updateSale = async (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice'>) => {
     if (!firestore || !products || !sales) return;
     
     const saleRef = doc(firestore, 'sales', id);
@@ -133,33 +134,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const batch = writeBatch(firestore);
 
-    // Revert old inventory changes
+    // Create a map of current product quantities
+    const currentQuantities: { [key: string]: number } = {};
+    products.forEach(p => {
+        currentQuantities[p.id] = p.quantity;
+    });
+
+    // Revert old inventory changes in memory
     for (const item of originalSale.items) {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-            const productRef = doc(firestore, 'perfumes', product.id);
-            batch.update(productRef, { quantity: product.quantity + item.quantity });
+        if (currentQuantities[item.productId] !== undefined) {
+            currentQuantities[item.productId] += item.quantity;
         }
     }
 
     let newTotalPrice = 0;
     const newSaleItems: SaleItem[] = [];
 
-    // Apply new inventory changes and calculate new total price
+    // Apply new inventory changes in memory and calculate new total price
     for (const item of saleData.items) {
         const product = products.find(p => p.id === item.productId);
         if (product) {
-            const productRef = doc(firestore, 'perfumes', product.id);
-            const newQuantity = product.quantity - item.quantity;
-            if (newQuantity < 0) {
+            if (currentQuantities[item.productId] - item.quantity < 0) {
                 console.error(`Not enough stock for ${product.name}`);
                 // NOTE: This will cancel the whole batch. 
                 // A better implementation might show an error to the user without reverting.
-                return batch.commit().then(() => Promise.reject("Not enough stock"));
+                return;
             }
-            batch.update(productRef, { quantity: newQuantity });
-            newTotalPrice += product.sellingPrice * item.quantity;
-            newSaleItems.push({ ...item, name: product.name, price: product.sellingPrice });
+            currentQuantities[item.productId] -= item.quantity;
+            newTotalPrice += item.price * item.quantity;
+            newSaleItems.push({ ...item, name: product.name });
+        }
+    }
+
+    // Update product quantities in firestore batch
+    for (const productId in currentQuantities) {
+        const originalProduct = products.find(p => p.id === productId);
+        if (originalProduct && originalProduct.quantity !== currentQuantities[productId]) {
+            const productRef = doc(firestore, 'perfumes', productId);
+            batch.update(productRef, { quantity: currentQuantities[productId] });
         }
     }
 
@@ -236,7 +248,7 @@ const deleteSale = (id: string) => {
     addDocumentNonBlocking(customersCollection, customer);
   }
 
-  const updateCustomer = (id: string, customer: Omit<Customer, 'id'>) => {
+  const updateCustomer = (id: string, customer: Partial<Omit<Customer, 'id'>>) => {
     if (!firestore) return;
     const customerRef = doc(firestore, 'customers', id);
     updateDocumentNonBlocking(customerRef, customer);
@@ -253,7 +265,7 @@ const deleteSale = (id: string) => {
     addDocumentNonBlocking(investorsCollection, investor);
   }
 
-  const updateInvestor = (id: string, investor: Omit<Investor, 'id'>) => {
+  const updateInvestor = (id: string, investor: Partial<Omit<Investor, 'id'>>) => {
     if (!firestore) return;
     const investorRef = doc(firestore, 'investors', id);
     updateDocumentNonBlocking(investorRef, investor);
