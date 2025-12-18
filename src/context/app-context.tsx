@@ -118,7 +118,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         if (newQuantity < 0) {
           console.error(`Not enough stock for ${product.name}`);
-          // TODO: This should probably show an error to the user
+          toast({
+            title: "Not enough stock",
+            description: `There is not enough stock for ${product.name}.`,
+            variant: "destructive",
+          });
           return;
         }
 
@@ -129,18 +133,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     const newSaleRef = doc(salesCollection);
-    const newSale: Omit<Sale, 'id'> = {
+    const newSaleData: Omit<Sale, 'id'> = {
       date: formatISO(new Date()),
       totalPrice,
       customerName: saleData.customerName,
       items: saleItems,
       paymentStatus: saleData.paymentStatus,
-      remainingAmount: saleData.remainingAmount,
-      description: saleData.description,
-      reminderDate: saleData.reminderDate,
     };
 
-    batch.set(newSaleRef, newSale);
+    if (saleData.remainingAmount) {
+        newSaleData.remainingAmount = saleData.remainingAmount;
+    }
+    if (saleData.description) {
+        newSaleData.description = saleData.description;
+    }
+    if (saleData.reminderDate) {
+        newSaleData.reminderDate = saleData.reminderDate;
+    }
+
+    batch.set(newSaleRef, newSaleData);
     
     batch.commit().catch(error => {
         console.error("Failed to record sale and update inventory", error);
@@ -177,9 +188,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const product = products.find(p => p.id === item.productId);
         if (product) {
             if (currentQuantities[item.productId] - item.quantity < 0) {
-                console.error(`Not enough stock for ${product.name}`);
-                // NOTE: This will cancel the whole batch. 
-                // A better implementation might show an error to the user without reverting.
+                 toast({
+                    title: "Not enough stock",
+                    description: `There is not enough stock for ${product.name}.`,
+                    variant: "destructive",
+                });
                 return;
             }
             currentQuantities[item.productId] -= item.quantity;
@@ -197,13 +210,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
     }
 
-    const updatedSale = {
+    const updatedSaleData: Partial<Sale> = {
         ...saleData,
         totalPrice: newTotalPrice,
         items: newSaleItems,
     };
+    
+    // Firestore does not accept `undefined` values.
+    if (!updatedSaleData.reminderDate) {
+        delete updatedSaleData.reminderDate;
+    }
+    if (!updatedSaleData.description) {
+        delete updatedSaleData.description;
+    }
+    if (!updatedSaleData.remainingAmount) {
+        delete updatedSaleData.remainingAmount;
+    }
 
-    batch.update(saleRef, updatedSale);
+    batch.update(saleRef, updatedSaleData);
     
     batch.commit().catch(error => {
         console.error("Failed to update sale", error);

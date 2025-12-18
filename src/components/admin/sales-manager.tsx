@@ -45,7 +45,7 @@ import {
     TableRow,
   } from '@/components/ui/table';
 import type { Sale } from '@/lib/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatISO } from 'date-fns';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import React from 'react';
@@ -83,7 +83,7 @@ function getBadgeVariant(status: Sale['paymentStatus']) {
   };
 
 export function SalesManager() {
-  const { products, sales, addSale, updateSale, deleteSale } = useAppContext();
+  const { products, sales, addSale, updateSale, deleteSale, customers } = useAppContext();
   const { toast } = useToast();
   const [isEdit, setIsEdit] = React.useState(false);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -183,17 +183,20 @@ export function SalesManager() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className='space-y-6'>
                         <FormField
-                        control={form.control}
-                        name="customerName"
-                        render={({ field }) => (
+                          control={form.control}
+                          name="customerName"
+                          render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Customer Name</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g., Ahmed Khan" {...field} />
-                            </FormControl>
-                            <FormMessage />
+                              <FormLabel>Customer Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Ahmed Khan" {...field} list="customer-list" />
+                              </FormControl>
+                              <datalist id="customer-list">
+                                {customers && customers.map(c => <option key={c.id} value={c.name} />)}
+                              </datalist>
+                              <FormMessage />
                             </FormItem>
-                        )}
+                          )}
                         />
 
                         <div>
@@ -236,6 +239,7 @@ export function SalesManager() {
                                 name={`items.${index}.price`}
                                 render={({ field }) => (
                                     <FormItem>
+                                    <FormLabel className="text-xs">Sold At</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="Price" className="w-28" {...field} />
                                     </FormControl>
@@ -247,6 +251,7 @@ export function SalesManager() {
                                 name={`items.${index}.quantity`}
                                 render={({ field }) => (
                                     <FormItem>
+                                    <FormLabel className="text-xs">Qty</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="Qty" className="w-20" {...field} />
                                     </FormControl>
