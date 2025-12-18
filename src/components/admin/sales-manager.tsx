@@ -51,6 +51,7 @@ export function SalesManager() {
       customerName: '',
       items: [{ productId: '', quantity: 1 }],
       paymentStatus: 'Paid',
+      remainingAmount: 0,
     },
   });
 
