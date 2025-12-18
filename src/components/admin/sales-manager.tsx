@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -45,12 +45,10 @@ import {
     TableRow,
   } from '@/components/ui/table';
 import type { Sale } from '@/lib/types';
-import { format, parseISO, formatISO } from 'date-fns';
-import { formatCurrency, cn } from '@/lib/utils';
+import { format, parse, parseISO, formatISO } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import React from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Calendar } from '../ui/calendar';
 
 
 const saleItemSchema = z.object({
@@ -66,7 +64,7 @@ const salesSchema = z.object({
   paymentStatus: z.enum(['Paid', 'Unpaid', 'Remaining']),
   remainingAmount: z.coerce.number().optional(),
   description: z.string().optional(),
-  reminderDate: z.date().optional(),
+  reminderDate: z.string().optional(),
 });
 
 function getBadgeVariant(status: Sale['paymentStatus']) {
@@ -87,7 +85,6 @@ export function SalesManager() {
   const { toast } = useToast();
   const [isEdit, setIsEdit] = React.useState(false);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
 
   const form = useForm<z.infer<typeof salesSchema>>({
     resolver: zodResolver(salesSchema),
@@ -110,7 +107,7 @@ export function SalesManager() {
   function onSubmit(values: z.infer<typeof salesSchema>) {
     const saleData = {
         ...values,
-        reminderDate: values.reminderDate ? formatISO(values.reminderDate) : undefined,
+        reminderDate: values.reminderDate ? formatISO(parse(values.reminderDate, 'dd/MM/yyyy', new Date())) : undefined,
     }
 
     if (isEdit && values.id) {
@@ -155,7 +152,7 @@ export function SalesManager() {
     form.reset({
         ...sale,
         items: sale.items.map(i => ({productId: i.productId, quantity: i.quantity, price: i.price })),
-        reminderDate: sale.reminderDate ? parseISO(sale.reminderDate) : undefined,
+        reminderDate: sale.reminderDate ? format(parseISO(sale.reminderDate), 'dd/MM/yyyy') : undefined,
     });
     setIsDialogOpen(true);
   }
@@ -339,50 +336,19 @@ export function SalesManager() {
                         )}
 
                         {(watchPaymentStatus === 'Unpaid' || watchPaymentStatus === 'Remaining') && (
-                            <FormField
+                             <FormField
                                 control={form.control}
                                 name="reminderDate"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
+                                  <FormItem>
                                     <FormLabel>Reminder Date</FormLabel>
-                                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                                        <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full pl-3 text-left font-normal",
-                                                !field.value && "text-muted-foreground"
-                                            )}
-                                            >
-                                            {field.value ? (
-                                                format(field.value, "dd/MM/yyyy")
-                                            ) : (
-                                                <span>Pick a date</span>
-                                            )}
-                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={field.value}
-                                            onSelect={(date) => {
-                                                field.onChange(date);
-                                                setIsCalendarOpen(false);
-                                            }}
-                                            disabled={(date) =>
-                                                date < new Date()
-                                            }
-                                            initialFocus
-                                        />
-                                        </PopoverContent>
-                                    </Popover>
+                                    <FormControl>
+                                      <Input placeholder="dd/mm/yyyy" {...field} />
+                                    </FormControl>
                                     <FormMessage />
-                                    </FormItem>
+                                  </FormItem>
                                 )}
-                            />
+                              />
                         )}
 
                         <FormField
