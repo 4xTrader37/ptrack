@@ -22,6 +22,7 @@ export interface Sale {
   remainingAmount?: number;
   description?: string;
   date: string;
+  reminderDate?: string;
 }
 
 export interface Investment {

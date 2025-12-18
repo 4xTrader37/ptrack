@@ -1,10 +1,11 @@
 'use client';
 
 import type { Product, Sale, Investment, SaleItem, Customer, Investor } from '@/lib/types';
-import { createContext, useContext, type ReactNode } from 'react';
-import { formatISO } from 'date-fns';
+import { createContext, useContext, type ReactNode, useEffect } from 'react';
+import { formatISO, isToday, parseISO } from 'date-fns';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 interface AppContextType {
   products: Product[] | null;
@@ -21,6 +22,7 @@ interface AppContextType {
     paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
     remainingAmount?: number;
     description?: string;
+    reminderDate?: string;
   }) => void;
   updateSale: (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice'>) => void;
   deleteSale: (id: string) => void;
@@ -40,6 +42,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const productsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'perfumes') : null, [firestore]);
   const salesCollection = useMemoFirebase(() => firestore ? collection(firestore, 'sales') : null, [firestore]);
@@ -52,6 +55,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: investments, isLoading: investmentsLoading } = useCollection<Investment>(investmentsCollection);
   const { data: customers, isLoading: customersLoading } = useCollection<Customer>(customersCollection);
   const { data: investors, isLoading: investorsLoading } = useCollection<Investor>(investorsCollection);
+
+  useEffect(() => {
+    if (sales) {
+      const todayReminders = sales.filter(sale => 
+        sale.reminderDate && isToday(parseISO(sale.reminderDate))
+      );
+      if (todayReminders.length > 0) {
+        toast({
+          title: "Payment Reminders",
+          description: `You have ${todayReminders.length} payment reminder(s) due today.`,
+          duration: 10000,
+        });
+      }
+    }
+  }, [sales, toast]);
+
 
   const addProduct = (product: Omit<Product, 'id'>) => {
     if (!productsCollection) return;
@@ -76,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
     remainingAmount?: number;
     description?: string;
+    reminderDate?: string;
   }) => {
     if (!firestore || !products || !salesCollection || !customersCollection || !customers) return;
     const batch = writeBatch(firestore);
@@ -117,6 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       paymentStatus: saleData.paymentStatus,
       remainingAmount: saleData.remainingAmount,
       description: saleData.description,
+      reminderDate: saleData.reminderDate,
     };
 
     batch.set(newSaleRef, newSale);

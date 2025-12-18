@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -46,9 +46,11 @@ import {
   } from '@/components/ui/table';
 import type { Sale } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import React from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
 
 
 const saleItemSchema = z.object({
@@ -64,6 +66,7 @@ const salesSchema = z.object({
   paymentStatus: z.enum(['Paid', 'Unpaid', 'Remaining']),
   remainingAmount: z.coerce.number().optional(),
   description: z.string().optional(),
+  reminderDate: z.date().optional(),
 });
 
 function getBadgeVariant(status: Sale['paymentStatus']) {
@@ -104,14 +107,19 @@ export function SalesManager() {
   const watchPaymentStatus = form.watch('paymentStatus');
 
   function onSubmit(values: z.infer<typeof salesSchema>) {
+    const saleData = {
+        ...values,
+        reminderDate: values.reminderDate ? formatISO(values.reminderDate) : undefined,
+    }
+
     if (isEdit && values.id) {
-        updateSale(values.id, values);
+        updateSale(values.id, saleData);
         toast({
             title: "Sale Updated",
             description: `Sale for ${values.customerName} has been updated.`,
         });
     } else {
-        addSale(values);
+        addSale(saleData);
         toast({
             title: "Sale Recorded",
             description: `A new sale for ${values.customerName} has been recorded.`,
@@ -135,7 +143,8 @@ export function SalesManager() {
       items: [{ productId: '', quantity: 1, price: 0 }],
       paymentStatus: 'Paid',
       remainingAmount: 0,
-      description: ''
+      description: '',
+      reminderDate: undefined,
     });
     setIsDialogOpen(true);
   }
@@ -144,7 +153,8 @@ export function SalesManager() {
     setIsEdit(true);
     form.reset({
         ...sale,
-        items: sale.items.map(i => ({productId: i.productId, quantity: i.quantity, price: i.price }))
+        items: sale.items.map(i => ({productId: i.productId, quantity: i.quantity, price: i.price })),
+        reminderDate: sale.reminderDate ? parseISO(sale.reminderDate) : undefined,
     });
     setIsDialogOpen(true);
   }
@@ -322,6 +332,50 @@ export function SalesManager() {
                         />
                         )}
 
+                        {(watchPaymentStatus === 'Unpaid' || watchPaymentStatus === 'Remaining') && (
+                            <FormField
+                                control={form.control}
+                                name="reminderDate"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                    <FormLabel>Reminder Date</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full pl-3 text-left font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                            >
+                                            {field.value ? (
+                                                format(field.value, "PPP")
+                                            ) : (
+                                                <span>Pick a date</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            disabled={(date) =>
+                                                date < new Date()
+                                            }
+                                            initialFocus
+                                        />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
                         <FormField
                         control={form.control}
                         name="description"
@@ -369,6 +423,7 @@ export function SalesManager() {
               <TableHead>Items</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Reminder</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -386,6 +441,9 @@ export function SalesManager() {
                   <TableCell>{format(parseISO(sale.date), 'dd MMM yyyy')}</TableCell>
                   <TableCell>
                     <Badge variant={getBadgeVariant(sale.paymentStatus)}>{sale.paymentStatus}</Badge>
+                  </TableCell>
+                   <TableCell>
+                    {sale.reminderDate ? format(parseISO(sale.reminderDate), 'dd MMM yyyy') : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(sale.totalPrice)}
@@ -422,7 +480,7 @@ export function SalesManager() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">
+                <TableCell colSpan={7} className="text-center">
                   No sales recorded yet.
                 </TableCell>
               </TableRow>
