@@ -87,6 +87,7 @@ export function SalesManager() {
   const { toast } = useToast();
   const [isEdit, setIsEdit] = React.useState(false);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
 
   const form = useForm<z.infer<typeof salesSchema>>({
     resolver: zodResolver(salesSchema),
@@ -344,7 +345,7 @@ export function SalesManager() {
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                     <FormLabel>Reminder Date</FormLabel>
-                                    <Popover>
+                                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                                         <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
@@ -355,7 +356,7 @@ export function SalesManager() {
                                             )}
                                             >
                                             {field.value ? (
-                                                format(field.value, "PPP")
+                                                format(field.value, "dd/MM/yyyy")
                                             ) : (
                                                 <span>Pick a date</span>
                                             )}
@@ -367,7 +368,10 @@ export function SalesManager() {
                                         <Calendar
                                             mode="single"
                                             selected={field.value}
-                                            onSelect={field.onChange}
+                                            onSelect={(date) => {
+                                                field.onChange(date);
+                                                setIsCalendarOpen(false);
+                                            }}
                                             disabled={(date) =>
                                                 date < new Date()
                                             }
