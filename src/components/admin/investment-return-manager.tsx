@@ -13,7 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -37,36 +36,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { Textarea } from '../ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
 const investmentReturnSchema = z.object({
-  investorId: z.string().min(1, 'Investor is required'),
-  amount: z.coerce.number().positive('Amount must be positive'),
-  description: z.string().optional(),
+  investmentId: z.string().min(1, 'Please select an investment to return'),
 });
 
 export function InvestmentReturnManager() {
-  const { investors, investmentReturns, addInvestmentReturn } = useAppContext();
+  const { investments, investmentReturns, giveBackInvestment } = useAppContext();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof investmentReturnSchema>>({
     resolver: zodResolver(investmentReturnSchema),
     defaultValues: {
-      investorId: '',
-      amount: 0,
-      description: '',
+      investmentId: '',
     },
   });
 
   function onSubmit(values: z.infer<typeof investmentReturnSchema>) {
-    addInvestmentReturn(values);
-    const investor = investors?.find(i => i.id === values.investorId);
-    toast({
-        title: "Investment Return Recorded",
-        description: `Return to ${investor?.name} has been recorded.`,
-      });
+    giveBackInvestment(values.investmentId);
     form.reset();
   }
 
@@ -76,7 +65,7 @@ export function InvestmentReturnManager() {
         <CardHeader>
           <CardTitle className="font-headline">Give Back Investment</CardTitle>
           <CardDescription>
-            Record an amount returned to an investor.
+            Select an investment to mark as fully returned. This will move it to the return history.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -84,20 +73,20 @@ export function InvestmentReturnManager() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="investorId"
+                name="investmentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Investor</FormLabel>
+                    <FormLabel>Investment to Return</FormLabel>
                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select an investor" />
+                            <SelectValue placeholder="Select an active investment" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {investors && investors.map((investor) => (
-                            <SelectItem key={investor.id} value={investor.id}>
-                              {investor.name}
+                          {investments && investments.map((investment) => (
+                            <SelectItem key={investment.id} value={investment.id}>
+                              {`${investment.investorName} - ${formatCurrency(investment.amount)} on ${format(parseISO(investment.date), 'dd/MM/yy')}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -106,33 +95,7 @@ export function InvestmentReturnManager() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount Returned (₨)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="e.g., Partial return of initial investment" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Record Return</Button>
+              <Button type="submit">Return Full Investment</Button>
             </form>
           </Form>
         </CardContent>

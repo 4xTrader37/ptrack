@@ -14,7 +14,7 @@ export interface SaleItem {
 }
 
 export interface Sale {
-  id: string;
+  id:string;
   customerName: string;
   items: SaleItem[];
   totalPrice: number;
@@ -27,6 +27,7 @@ export interface Sale {
 
 export interface Investment {
   id: string;
+  investorId: string;
   investorName: string;
   amount: number;
   source: 'External Investor' | 'Business Self-Investment';

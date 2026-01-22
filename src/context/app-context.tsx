@@ -2,7 +2,7 @@
 
 import type { Product, Sale, Investment, SaleItem, Customer, Investor, InvestmentReturn } from '@/lib/types';
 import { createContext, useContext, type ReactNode, useEffect } from 'react';
-import { formatISO, isToday, parseISO } from 'date-fns';
+import { format, formatISO, isToday, parseISO } from 'date-fns';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { useCollection, useFirestore, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -27,8 +27,8 @@ interface AppContextType {
   }) => void;
   updateSale: (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice'>) => void;
   deleteSale: (id: string) => void;
-  addInvestment: (investment: Omit<Investment, 'id' | 'date'>) => void;
-  addInvestmentReturn: (returnData: { investorId: string; amount: number; description?: string }) => void;
+  addInvestment: (investment: { investorName: string; amount: number; source: 'External Investor' | 'Business Self-Investment'; itemsPurchased: string; }) => void;
+  giveBackInvestment: (investmentId: string) => void;
   getInventoryValue: () => number;
   getInventoryProfit: () => number;
   isLoading: boolean;
@@ -271,10 +271,10 @@ const deleteSale = (id: string) => {
     });
 };
 
-  const addInvestment = (investment: Omit<Investment, 'id' | 'date'>) => {
-    if (!investmentsCollection || !investorsCollection || !investors) return;
+  const addInvestment = (investment: { investorName: string; amount: number; source: 'External Investor' | 'Business Self-Investment'; itemsPurchased: string; }) => {
+    if (!firestore || !investmentsCollection || !investorsCollection || !investors) return;
 
-    const batch = writeBatch(firestore!);
+    const batch = writeBatch(firestore);
 
     let investor = investors.find(i => i.name.toLowerCase() === investment.investorName.toLowerCase());
     if (!investor) {
@@ -284,8 +284,9 @@ const deleteSale = (id: string) => {
         investor = newInvestor;
     }
 
-    const newInvestment = {
+    const newInvestment: Omit<Investment, 'id'> = {
       ...investment,
+      investorId: investor.id,
       date: formatISO(new Date()),
     }
     const newInvestmentRef = doc(investmentsCollection);
@@ -296,23 +297,42 @@ const deleteSale = (id: string) => {
     });
   };
 
-  const addInvestmentReturn = (returnData: { investorId: string; amount: number; description?: string }) => {
-    if (!investmentReturnsCollection || !investors) return;
-    
-    const investor = investors.find(i => i.id === returnData.investorId);
-    if (!investor) {
-        console.error("Investor not found");
-        toast({ title: "Error", description: "Investor not found.", variant: "destructive" });
+  const giveBackInvestment = (investmentId: string) => {
+    if (!firestore || !investments || !investmentReturnsCollection) {
+        toast({ title: "Error", description: "Database not ready.", variant: "destructive" });
         return;
     }
 
-    const newReturn: Omit<InvestmentReturn, 'id'> = {
-      ...returnData,
-      investorName: investor.name,
-      date: formatISO(new Date()),
-    };
+    const investmentToReturn = investments.find(inv => inv.id === investmentId);
 
-    addDocumentNonBlocking(investmentReturnsCollection, newReturn);
+    if (!investmentToReturn) {
+        toast({ title: "Error", description: "Investment not found.", variant: "destructive" });
+        return;
+    }
+
+    const batch = writeBatch(firestore);
+
+    // Create a new investment return record
+    const newReturnRef = doc(investmentReturnsCollection);
+    const newReturnData: Omit<InvestmentReturn, 'id'> = {
+      investorId: investmentToReturn.investorId,
+      investorName: investmentToReturn.investorName,
+      amount: investmentToReturn.amount,
+      date: formatISO(new Date()),
+      description: `Return of investment for '${investmentToReturn.itemsPurchased}' made on ${format(parseISO(investmentToReturn.date), 'dd MMM yyyy')}`
+    };
+    batch.set(newReturnRef, newReturnData);
+
+    // Delete the original investment
+    const investmentRef = doc(firestore, 'investments', investmentId);
+    batch.delete(investmentRef);
+
+    batch.commit().then(() => {
+      toast({ title: "Investment Returned", description: "The investment has been marked as returned." });
+    }).catch(error => {
+        console.error("Failed to return investment", error);
+        toast({ title: "Error", description: "Failed to return investment.", variant: "destructive" });
+    });
   };
 
   const getInventoryValue = () => {
@@ -376,7 +396,7 @@ const deleteSale = (id: string) => {
     updateSale,
     deleteSale,
     addInvestment,
-    addInvestmentReturn,
+    giveBackInvestment,
     getInventoryValue,
     getInventoryProfit,
     isLoading,

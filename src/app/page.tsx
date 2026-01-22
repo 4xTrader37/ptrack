@@ -19,11 +19,12 @@ import { DateRangePicker } from '@/components/dashboard/date-range-picker';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { InventoryTable } from '@/components/dashboard/inventory-table';
+import { InvestmentReturnsTable } from '@/components/dashboard/investment-returns-table';
 
 type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining' | 'Gift' | 'Free';
 
 export default function DashboardPage() {
-  const { sales, investments, products, getInventoryValue, getInventoryProfit } = useAppContext();
+  const { sales, investments, products, investmentReturns, getInventoryValue, getInventoryProfit } = useAppContext();
   const [tab, setTab] = React.useState('7days');
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: subDays(startOfToday(), 6),
@@ -85,6 +86,19 @@ export default function DashboardPage() {
       return investmentDate >= fromDate && investmentDate <= addDays(toDate,1);
     });
   }, [investments, date, tab]);
+  
+  const filteredInvestmentReturns = React.useMemo(() => {
+    if (!investmentReturns) return [];
+    if (tab === 'from_start') return investmentReturns;
+    if (!date?.from) return [];
+    const fromDate = date.from;
+    const toDate = date.to || date.from;
+    return investmentReturns.filter((ir) => {
+      const returnDate = parseISO(ir.date);
+      return returnDate >= fromDate && returnDate <= addDays(toDate,1);
+    });
+  }, [investmentReturns, date, tab]);
+
 
   const { totalSales, totalInvestment, profitOrLoss, profitLossRatio, totalEarned } = React.useMemo(() => {
     const totalSales = dateFilteredSales.reduce((sum, sale) => sum + sale.totalPrice, 0);
@@ -141,6 +155,7 @@ export default function DashboardPage() {
         />
         <InvestmentsTable investments={filteredInvestments} />
       </div>
+      <InvestmentReturnsTable investmentReturns={filteredInvestmentReturns} />
       <InventoryTable products={products || []} />
       <div className="flex justify-center mt-8">
         <Button asChild variant="outline">

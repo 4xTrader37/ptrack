@@ -43,7 +43,7 @@ const investmentSchema = z.object({
 });
 
 export function InvestmentManager() {
-  const { investments, addInvestment } = useAppContext();
+  const { investments, addInvestment, investors } = useAppContext();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof investmentSchema>>({
@@ -84,8 +84,11 @@ export function InvestmentManager() {
                   <FormItem>
                     <FormLabel>Investor Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Yasir Malik or Self" {...field} />
+                      <Input placeholder="e.g., Yasir Malik or Self" {...field} list="investor-list" />
                     </FormControl>
+                     <datalist id="investor-list">
+                        {investors && investors.map(i => <option key={i.id} value={i.name} />)}
+                      </datalist>
                     <FormMessage />
                   </FormItem>
                 )}
