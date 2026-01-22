@@ -19,7 +19,7 @@ interface AppContextType {
   addSale: (saleData: {
     customerName: string;
     items: { productId: string, quantity: number, price: number }[];
-    paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
+    paymentStatus: 'Paid' | 'Unpaid' | 'Remaining' | 'Gift' | 'Free';
     remainingAmount?: number;
     description?: string;
     reminderDate?: string;
@@ -92,7 +92,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addSale = (saleData: {
     customerName: string;
     items: { productId: string, quantity: number, price: number }[];
-    paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
+    paymentStatus: 'Paid' | 'Unpaid' | 'Remaining' | 'Gift' | 'Free';
     remainingAmount?: number;
     description?: string;
     reminderDate?: string;
@@ -130,6 +130,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         totalPrice += item.price * item.quantity;
         saleItems.push({ ...item, name: product.name });
       }
+    }
+
+    if (saleData.paymentStatus === 'Gift' || saleData.paymentStatus === 'Free') {
+        totalPrice = 0;
     }
     
     const newSaleRef = doc(salesCollection);
@@ -199,6 +203,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             newTotalPrice += item.price * item.quantity;
             newSaleItems.push({ ...item, name: product.name });
         }
+    }
+    
+    if (saleData.paymentStatus === 'Gift' || saleData.paymentStatus === 'Free') {
+        newTotalPrice = 0;
     }
 
     // Update product quantities in firestore batch

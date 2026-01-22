@@ -20,7 +20,7 @@ import { formatCurrency } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 
-type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining';
+type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining' | 'Gift' | 'Free';
 
 interface SalesTableProps {
   sales: Sale[];
@@ -38,6 +38,9 @@ export function SalesTable({ sales, totalEarned, statusFilter, onStatusFilterCha
         return 'destructive';
       case 'Remaining':
         return 'secondary';
+      case 'Gift':
+      case 'Free':
+        return 'outline';
       default:
         return 'outline';
     }
@@ -54,11 +57,13 @@ export function SalesTable({ sales, totalEarned, statusFilter, onStatusFilterCha
             <CardDescription>A list of recent sales.</CardDescription>
         </div>
         <Tabs value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as PaymentStatusFilter)}>
-            <TabsList>
+            <TabsList className="flex-wrap h-auto justify-start md:justify-center">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="Paid">Paid</TabsTrigger>
                 <TabsTrigger value="Unpaid">Unpaid</TabsTrigger>
                 <TabsTrigger value="Remaining">Remaining</TabsTrigger>
+                <TabsTrigger value="Gift">Gift</TabsTrigger>
+                <TabsTrigger value="Free">Free</TabsTrigger>
             </TabsList>
         </Tabs>
       </CardHeader>

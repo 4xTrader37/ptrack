@@ -18,7 +18,7 @@ export interface Sale {
   customerName: string;
   items: SaleItem[];
   totalPrice: number;
-  paymentStatus: 'Paid' | 'Unpaid' | 'Remaining';
+  paymentStatus: 'Paid' | 'Unpaid' | 'Remaining' | 'Gift' | 'Free';
   remainingAmount?: number;
   description?: string;
   date: string;

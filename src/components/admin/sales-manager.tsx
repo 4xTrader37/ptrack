@@ -61,7 +61,7 @@ const salesSchema = z.object({
   id: z.string().optional(),
   customerName: z.string().min(1, 'Customer name is required'),
   items: z.array(saleItemSchema).min(1, 'At least one item is required'),
-  paymentStatus: z.enum(['Paid', 'Unpaid', 'Remaining']),
+  paymentStatus: z.enum(['Paid', 'Unpaid', 'Remaining', 'Gift', 'Free']),
   remainingAmount: z.coerce.number().optional(),
   description: z.string().optional(),
   reminderDate: z.string().optional(),
@@ -75,6 +75,9 @@ function getBadgeVariant(status: Sale['paymentStatus']) {
         return 'destructive';
       case 'Remaining':
         return 'secondary';
+      case 'Gift':
+      case 'Free':
+        return 'outline';
       default:
         return 'outline';
     }
@@ -305,7 +308,7 @@ export function SalesManager() {
                                 <RadioGroup
                                 onValueChange={field.onChange}
                                 defaultValue={field.value}
-                                className="flex items-center space-x-4"
+                                className="flex items-center space-x-4 flex-wrap"
                                 >
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                     <FormControl>
@@ -324,6 +327,18 @@ export function SalesManager() {
                                     <RadioGroupItem value="Remaining" />
                                     </FormControl>
                                     <FormLabel className="font-normal">Remaining</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                    <RadioGroupItem value="Gift" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">Gift</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                    <FormControl>
+                                    <RadioGroupItem value="Free" />
+                                    </FormControl>
+                                    <FormLabel className="font-normal">Free</FormLabel>
                                 </FormItem>
                                 </RadioGroup>
                             </FormControl>

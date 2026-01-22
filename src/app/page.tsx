@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { InventoryTable } from '@/components/dashboard/inventory-table';
 
-type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining';
+type PaymentStatusFilter = 'all' | 'Paid' | 'Unpaid' | 'Remaining' | 'Gift' | 'Free';
 
 export default function DashboardPage() {
   const { sales, investments, products, getInventoryValue, getInventoryProfit } = useAppContext();
