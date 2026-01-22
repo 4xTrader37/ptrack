@@ -198,6 +198,46 @@
         "id",
         "name"
       ]
+    },
+    "InvestmentReturn": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Investment Return",
+      "type": "object",
+      "description": "Represents an investment amount returned to an investor.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the investment return."
+        },
+        "investorId": {
+          "type": "string",
+          "description": "Reference to Investor."
+        },
+        "investorName": {
+          "type": "string",
+          "description": "Name of the investor for easy lookup."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount returned to the investor in PKR."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date the investment was returned.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description or notes about the return."
+        }
+      },
+      "required": [
+        "id",
+        "investorId",
+        "investorName",
+        "amount",
+        "date"
+      ]
     }
   },
   "auth": {
@@ -300,6 +340,22 @@
             {
               "name": "itemId",
               "description": "The unique ID of the item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/investmentReturns/{investmentReturnId}",
+        "definition": {
+          "entityName": "InvestmentReturn",
+          "schema": {
+            "$ref": "#/backend/entities/InvestmentReturn"
+          },
+          "description": "Stores investment return data. Path-based ownership, where {investmentReturnId} is the document ID.",
+          "params": [
+            {
+              "name": "investmentReturnId",
+              "description": "The unique ID of the investment return."
             }
           ]
         }

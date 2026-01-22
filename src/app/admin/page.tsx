@@ -20,6 +20,7 @@ import { CustomerManager } from '@/components/admin/customer-manager';
 import { InvestorManager } from '@/components/admin/investor-manager';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { InvestmentReturnManager } from '@/components/admin/investment-return-manager';
 
 export default function AdminPage() {
   return (
@@ -32,6 +33,7 @@ export default function AdminPage() {
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="sales">Sales</TabsTrigger>
           <TabsTrigger value="investments">Investments</TabsTrigger>
+          <TabsTrigger value="investmentReturns">Investment Returns</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
           <TabsTrigger value="investors">Investors</TabsTrigger>
         </TabsList>
@@ -43,6 +45,9 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="investments" className="space-y-4">
           <InvestmentManager />
+        </TabsContent>
+        <TabsContent value="investmentReturns" className="space-y-4">
+          <InvestmentReturnManager />
         </TabsContent>
         <TabsContent value="customers" className="space-y-4">
           <CustomerManager />

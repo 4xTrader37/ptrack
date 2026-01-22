@@ -1,6 +1,6 @@
 'use client';
 
-import type { Product, Sale, Investment, SaleItem, Customer, Investor } from '@/lib/types';
+import type { Product, Sale, Investment, SaleItem, Customer, Investor, InvestmentReturn } from '@/lib/types';
 import { createContext, useContext, type ReactNode, useEffect } from 'react';
 import { formatISO, isToday, parseISO } from 'date-fns';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -13,6 +13,7 @@ interface AppContextType {
   investments: Investment[] | null;
   customers: Customer[] | null;
   investors: Investor[] | null;
+  investmentReturns: InvestmentReturn[] | null;
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, product: Partial<Omit<Product, 'id'>>) => void;
   deleteProduct: (id: string) => void;
@@ -27,6 +28,7 @@ interface AppContextType {
   updateSale: (id: string, saleData: Omit<Sale, 'id' | 'date' | 'totalPrice'>) => void;
   deleteSale: (id: string) => void;
   addInvestment: (investment: Omit<Investment, 'id' | 'date'>) => void;
+  addInvestmentReturn: (returnData: { investorId: string; amount: number; description?: string }) => void;
   getInventoryValue: () => number;
   getInventoryProfit: () => number;
   isLoading: boolean;
@@ -49,12 +51,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const investmentsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'investments') : null, [firestore]);
   const customersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'customers') : null, [firestore]);
   const investorsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'investors') : null, [firestore]);
+  const investmentReturnsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'investmentReturns') : null, [firestore]);
 
   const { data: products, isLoading: productsLoading } = useCollection<Product>(productsCollection);
   const { data: sales, isLoading: salesLoading } = useCollection<Sale>(salesCollection);
   const { data: investments, isLoading: investmentsLoading } = useCollection<Investment>(investmentsCollection);
   const { data: customers, isLoading: customersLoading } = useCollection<Customer>(customersCollection);
   const { data: investors, isLoading: investorsLoading } = useCollection<Investor>(investorsCollection);
+  const { data: investmentReturns, isLoading: investmentReturnsLoading } = useCollection<InvestmentReturn>(investmentReturnsCollection);
 
   useEffect(() => {
     if (sales) {
@@ -292,6 +296,25 @@ const deleteSale = (id: string) => {
     });
   };
 
+  const addInvestmentReturn = (returnData: { investorId: string; amount: number; description?: string }) => {
+    if (!investmentReturnsCollection || !investors) return;
+    
+    const investor = investors.find(i => i.id === returnData.investorId);
+    if (!investor) {
+        console.error("Investor not found");
+        toast({ title: "Error", description: "Investor not found.", variant: "destructive" });
+        return;
+    }
+
+    const newReturn: Omit<InvestmentReturn, 'id'> = {
+      ...returnData,
+      investorName: investor.name,
+      date: formatISO(new Date()),
+    };
+
+    addDocumentNonBlocking(investmentReturnsCollection, newReturn);
+  };
+
   const getInventoryValue = () => {
     if (!products) return 0;
     return products.reduce((total, p) => total + p.costPrice * p.quantity, 0);
@@ -337,7 +360,7 @@ const deleteSale = (id: string) => {
   }
 
 
-  const isLoading = productsLoading || salesLoading || investmentsLoading || customersLoading || investorsLoading;
+  const isLoading = productsLoading || salesLoading || investmentsLoading || customersLoading || investorsLoading || investmentReturnsLoading;
 
   const value = {
     products,
@@ -345,6 +368,7 @@ const deleteSale = (id: string) => {
     investments,
     customers,
     investors,
+    investmentReturns,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -352,6 +376,7 @@ const deleteSale = (id: string) => {
     updateSale,
     deleteSale,
     addInvestment,
+    addInvestmentReturn,
     getInventoryValue,
     getInventoryProfit,
     isLoading,

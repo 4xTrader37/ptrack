@@ -43,3 +43,12 @@ export interface Investor {
     id: string;
     name: string;
 }
+
+export interface InvestmentReturn {
+  id: string;
+  investorId: string;
+  investorName: string;
+  amount: number;
+  date: string;
+  description?: string;
+}

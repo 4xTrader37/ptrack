@@ -132,5 +132,18 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn() && resource != null;
     }
+
+    /**
+     * @description Allows any authenticated user to manage Investment Return documents.
+     * @path /investmentReturns/{returnId}
+     * @allow A signed-in user (create) a new investment return document.
+     * @deny An unauthenticated user (get) an investment return document.
+     * @principle Restricts all database access to signed-in users.
+     */
+    match /investmentReturns/{returnId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource != null;
+    }
   }
 }
