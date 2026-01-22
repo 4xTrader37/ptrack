@@ -44,6 +44,9 @@ export default function DashboardPage() {
       case '30days':
         setDate({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
         break;
+      case 'from_start':
+        setDate(undefined);
+        break;
       case 'custom':
         setDate(undefined);
         break;
@@ -53,14 +56,16 @@ export default function DashboardPage() {
   };
 
   const dateFilteredSales = React.useMemo(() => {
-    if (!date?.from || !sales) return [];
+    if (!sales) return [];
+    if (tab === 'from_start') return sales;
+    if (!date?.from) return [];
     const fromDate = date.from;
     const toDate = date.to || date.from;
     return sales.filter((sale) => {
       const saleDate = parseISO(sale.date);
       return saleDate >= fromDate && saleDate <= addDays(toDate,1);
     });
-  }, [sales, date]);
+  }, [sales, date, tab]);
 
   const filteredSales = React.useMemo(() => {
     if (paymentStatusFilter === 'all') {
@@ -70,14 +75,16 @@ export default function DashboardPage() {
   }, [dateFilteredSales, paymentStatusFilter]);
 
   const filteredInvestments = React.useMemo(() => {
-    if (!date?.from || !investments) return [];
+    if (!investments) return [];
+    if (tab === 'from_start') return investments;
+    if (!date?.from) return [];
     const fromDate = date.from;
     const toDate = date.to || date.from;
     return investments.filter((investment) => {
       const investmentDate = parseISO(investment.date);
       return investmentDate >= fromDate && investmentDate <= addDays(toDate,1);
     });
-  }, [investments, date]);
+  }, [investments, date, tab]);
 
   const { totalSales, totalInvestment, profitOrLoss, profitLossRatio, totalEarned } = React.useMemo(() => {
     const totalSales = dateFilteredSales.reduce((sum, sale) => sum + sale.totalPrice, 0);
@@ -107,6 +114,7 @@ export default function DashboardPage() {
               <TabsTrigger value="today">Today</TabsTrigger>
               <TabsTrigger value="7days">Last 7 Days</TabsTrigger>
               <TabsTrigger value="30days">Last Month</TabsTrigger>
+              <TabsTrigger value="from_start">From Start</TabsTrigger>
               <TabsTrigger value="custom">Custom</TabsTrigger>
             </TabsList>
           </Tabs>
